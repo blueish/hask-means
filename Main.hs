@@ -8,10 +8,10 @@ import GHC.Word
 --main will read an image from filepath str and return [[RGB values]]
 -- main :: [Char] -> IO [[Word8]]
 imgFromPath path = do
-	img <- readImage path
-	let rgb8 = convertRGB8 $ ignoreError img
-	let pixels = chunksOf 3 $ toList (imageData rgb8)
-	return pixels
+    img <- readImage path
+    let rgb8 = convertRGB8 $ ignoreError img
+    let pixels = chunksOf 3 $ toList (imageData rgb8)
+    return pixels
 
 -- ASSUMPTION: D = 3 for all images (rgb values are 3 integer values)
 dimensions :: Int
@@ -28,15 +28,14 @@ type Mean = [Double]
 -- a list with a 1:1 map representing a mapping of each RGBValue to each Mean
 type MeanAssignments = [Int]
 
--- ignoreError :: Either b -> b
+ignoreError :: Either t b -> b
 ignoreError (Left a) = error "merp"
 ignoreError (Right a) = a
 
 quantizeImage path bits = do
-	img <- imgFromPath path
-	--(means, labels) <- kmeans (2^bits) img
-	return 0
-
+    img <- imgFromPath path
+    --(means, labels) <- kmeans (2^bits) img
+    return 0
 {-
  2 -> [ [0,0], [2.1,2] [2,2]] -> 
  (
