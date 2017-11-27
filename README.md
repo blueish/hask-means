@@ -1,6 +1,11 @@
 # hask-means
 k-means in haskell
+with vector quantization
 
-(with maybe some other stuff)
+
+
+
+## required packages
+> cabal install JuicyPixels
 
 
