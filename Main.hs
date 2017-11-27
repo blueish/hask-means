@@ -10,12 +10,12 @@ import GHC.Word
 imgFromPath path = do
     img <- readImage path
     let rgb8 = convertRGB8 $ ignoreError img
-    let pixels = chunksOf 3 $ toList (imageData rgb8)
+    let pixels = chunksOf 3 $ map fromIntegral $ map toInteger $ toList (imageData rgb8)
     return pixels
 
 -- ASSUMPTION: D = 3 for all images (rgb values are 3 integer values)
 dimensions :: Int
-dimensions = 2
+dimensions = 3
 
 -- each RGBValue is (n = Dimension) ints between 0 and 255
 type RGBValue = [Int]
@@ -28,14 +28,16 @@ type Mean = [Double]
 -- a list with a 1:1 map representing a mapping of each RGBValue to each Mean
 type MeanAssignments = [Int]
 
+
 ignoreError :: Either t b -> b
 ignoreError (Left a) = error "merp"
 ignoreError (Right a) = a
 
 quantizeImage path bits = do
     img <- imgFromPath path
-    --(means, labels) <- kmeans (2^bits) img
-    return 0
+    (means, labels) <- kmeans (2^bits) img
+    return (means, labels)
+    -- return 0
 {-
  2 -> [ [0,0], [2.1,2] [2,2]] -> 
  (
@@ -65,6 +67,8 @@ kmeans k dataSet = do
         let initialMeans = chunksOf dimensions
                 . take (dimensions * k)
                 $ (randomRs (0, 255) rg :: [Double])
+        print "the test data:"
+        print dataSet
 
         print "the initial means: "
         print initialMeans
