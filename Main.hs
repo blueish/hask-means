@@ -18,6 +18,8 @@ type RGBImageData = [RGBValue]
 -- each centroid is a list of D double values between 0 and 255
 type Centroid = [Double]
 
+-- a list with a 1:1 map representing a mapping of each RGBValue to each Centroid
+type CentroidAssignments = [Int]
 
 {-
  2 -> [ [0,0], [2.1,2] [2,2]] -> 
@@ -75,28 +77,30 @@ kmeans k dataSet = do
 
 -- recalculateCentroidsAndAssignments dataSet (hasChanged, newCentroids, assignments) keeps updating centroids and recalculating the assignments
 -- of the centroids until there were no changes in the assignments
-recalculateCentroidsAndAssignments :: [[Int]] -> (Bool, [[Int]], [Int]) -> ([[Int]], [Int])
+recalculateCentroidsAndAssignments :: RGBImageData -> (Bool, [[Int]], [Int]) -> ([[Int]], [Int])
 recalculateCentroidsAndAssignments dataSet (False, centroids, assignments) = (centroids, assignments)
 recalculateCentroidsAndAssignments dataSet (n, centroids, assignments) = recalculateCentroidsAndAssignments dataSet (wasChanged, newCentroids, newAssignments)
     where newCentroids = recalculateCentroids assignments dataSet 
           (wasChanged, newAssignments) = updateAssignmentsFlagged newCentroids dataSet
 
 -- recalculateCentroids assignments dataSet = 
---     map averageOfPoints
+--     map calculateNewMean
 --     . map removeGroupingLabels
 --     . groupBy (\a b -> (fst a) == (fst b)) 
 --     . zip assignments dataSet
 
-updateAssignmentsFlagged :: [[Int]] -> [[Int]] -> (Bool, [Int])
+-- takes centroids and a dataset, and gives back whether any changed alongside the new mappings
+updateAssignmentsFlagged :: [Centroid] -> RGBImageData -> (Bool, CentroidAssignments)
 updateAssignmentsFlagged _ _ = (False, [ 0, 0, 1, 1])
 
+recalculateCentroids :: CentroidAssignments -> RGBImageData -> [Centroid]
 recalculateCentroids assignments dataSet = result
     where zips = zip assignments dataSet
           groups = groupBy (\a b -> (fst a) == (fst b)) zips
           groupsNoLabels = map removeGroupingLabels groups
-          result = map averageOfPoints groupsNoLabels
+          result = map calculateNewMean groupsNoLabels
 
-indexOfClosestMean :: (Floating f, Ord f) => [[ f ]] -> [ f ] -> Int
+-- indexOfClosestMean :: (Floating f, Ord f) => [Centroid] -> RGBValue -> Int
 indexOfClosestMean centroids rgb = unbox $ elemIndex minDist distances
     where distances = map (distance rgb) centroids
           minDist = minimum distances
@@ -105,15 +109,20 @@ indexOfClosestMean centroids rgb = unbox $ elemIndex minDist distances
 
 
 -- removeGroupingLabels removes the tuples added by the zipping of groups
-removeGroupingLabels :: [(Int, [Int])] -> [[Int]]
+-- removeGroupingLabels :: [(Int, [Int])] -> [[Int]]
 removeGroupingLabels arr = map groupingHelper arr
     where groupingHelper (_, a) = a
 
 -- -- average of n points with dimensions d into one point with dimension d
-averageOfPoints :: (Foldable f) => f [ Int ] -> [ Int ]
-averageOfPoints arr = divVec (foldl addVec (take dimensions $ repeat 0) arr) (length arr)
+-- calculateNewMean :: (Foldable f) => f [ Int ] -> [ Int ]
+calculateNewMean :: [RGBValue] -> Centroid
+calculateNewMean arr = divVec (foldl addVec initialZeroVector arr) (length arr)
+    where initialZeroVector = take dimensions $ repeat 0
+-- calculateNewMean arr = map (/ (length arr))
+                       -- $ foldl addVec initialZeroVector arr
+    -- where initialZeroVector = take dimensions $ repeat 0
 
-addVec :: Num a => [a] -> [a] -> [a]
+addVec :: [Int] -> [Int] -> [Int]
 addVec a1 a2 = addHelper a1 a2 (length a1) []
     where addHelper a1 a2 0 acc = acc
           addHelper a1 a2 n acc = addHelper a1 a2 newN (newVal:acc)
@@ -122,9 +131,13 @@ addVec a1 a2 = addHelper a1 a2 (length a1) []
                  a2Idx = a2 !! newN
                  newVal = aIdx + a2Idx
 
-divVec :: Integral f => [f] -> f -> [f]
-divVec vec n = map (\a -> a `div` n) vec
+-- Divides each value of vec by n
+divVec :: [Int] -> Int -> Centroid
+divVec vec n = map (\a -> a `div` (fromIntegral n)) $ map fromIntegral vec
 
 
--- distance :: Floating f => [ f ] -> [f] -> f
-distance point1 point2 = sqrt . foldl (\acc (a, b) -> acc + ((a - b) ^ 2)) 0 $ zip point1 point2
+distance :: RGBValue -> Centroid -> Double
+distance rgb cent = sqrt 
+    . foldl (\acc (a, b) -> acc + ((a - b) ^ 2)) 0
+    -- have to map each Int so we can add them to doubles
+    $ zip (map fromIntegral rgb) cent
