@@ -77,7 +77,7 @@ kmeans k dataSet = do
 
 -- recalculateCentroidsAndAssignments dataSet (hasChanged, newCentroids, assignments) keeps updating centroids and recalculating the assignments
 -- of the centroids until there were no changes in the assignments
-recalculateCentroidsAndAssignments :: RGBImageData -> (Bool, [[Int]], [Int]) -> ([[Int]], [Int])
+recalculateCentroidsAndAssignments :: RGBImageData -> (Bool, [Centroid], CentroidAssignments) -> ([Centroid], CentroidAssignments)
 recalculateCentroidsAndAssignments dataSet (False, centroids, assignments) = (centroids, assignments)
 recalculateCentroidsAndAssignments dataSet (n, centroids, assignments) = recalculateCentroidsAndAssignments dataSet (wasChanged, newCentroids, newAssignments)
     where newCentroids = recalculateCentroids assignments dataSet 
@@ -133,7 +133,7 @@ addVec a1 a2 = addHelper a1 a2 (length a1) []
 
 -- Divides each value of vec by n
 divVec :: [Int] -> Int -> Centroid
-divVec vec n = map (\a -> a `div` (fromIntegral n)) $ map fromIntegral vec
+divVec vec n = map (\a -> a / (fromIntegral n)) $ map fromIntegral vec
 
 
 distance :: RGBValue -> Centroid -> Double
