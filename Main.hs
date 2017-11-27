@@ -1,7 +1,7 @@
 import System.Random
 import Data.List.Split
 import Data.List
-import Data.Vector.Storable
+import Data.Vector.Storable (toList)
 import Codec.Picture
 import GHC.Word
 
@@ -28,7 +28,7 @@ type Mean = [Double]
 -- a list with a 1:1 map representing a mapping of each RGBValue to each Mean
 type MeanAssignments = [Int]
 
-ignoreError :: (Either a) => a b -> b
+-- ignoreError :: Either b -> b
 ignoreError (Left a) = error "merp"
 ignoreError (Right a) = a
 
