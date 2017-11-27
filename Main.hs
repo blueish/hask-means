@@ -6,6 +6,18 @@ import Data.List
 --     putStrLn "hello world"
 
 
+-- ASSUMPTION: D = 3 for all images (rgb values are 3 integer values)
+dimensions :: Int
+dimensions = 3
+
+-- each RGBValue is (n = Dimension) ints between 0 and 255
+type RGBValue = [Int]
+-- RGBImageData is an array of RGBValues
+type RGBImageData = [RGBValue]
+
+-- each centroid is a list of D double values between 0 and 255
+type Centroid = [Double]
+
 
 {-
  2 -> [ [0,0], [2.1,2] [2,2]] -> 
@@ -20,16 +32,13 @@ import Data.List
     [ 1, 2 2 ]
   )
 -}
-testInput :: [[Double]]
+testInput :: RGBImageData
 testInput = [
         [0, 0, 0],
         [1, 1, 1],
         [200, 200, 200],
         [210, 210, 210]
     ]
-
--- ASSUMPTION: D = 3 for all images (rgb values are 3 integer values)
-dimensions = 3
 
 -- kmeans :: Fractional f =>Int -> [[ Int ]] -> ([[ f ]], [ Int ])
 kmeans k dataSet = do
@@ -58,14 +67,17 @@ kmeans k dataSet = do
 -- calculateMeansAndCentroids centroids dataSet =  takes initial centroids and a dataSet, and recalculates the centroids
 -- until an update of the centroids lead to no changes, returning the final centroids and the group assignment values for the dataSet
 -- calculateMeansAndCentroids :: [[Double]] -> [[Double]] -> ([[Double]], [Int])
-calculateMeansAndCentroids centroids dataSet = helper dataSet (True, centroids, initData)
-    where initData = map (indexOfClosestMean centroids) dataSet
-    -- helper dataSet (hasChanged, newCentroids, assignments) keeps updating centroids and recalculating the assignments
-    -- of the centroids until there were no changes in the assignments
-    -- helper :: [[Double]] -> (Bool, [[Double]] [[Int]]) -> ([[Double]], [Int])
+-- calculateMeansAndCentroids centroids dataSet = recalculateCentroidsAndAssignments dataSet initAcc
+--     where initData = map (indexOfClosestMean centroids) dataSet
+--           initAcc = (True, centroids, initData)
 
-helper dataSet (False, centroids, assignments) = (centroids, assignments)
-helper dataSet (n, centroids, assignments) = helper dataSet (wasChanged, newCentroids, newAssignments)
+    -- recalculateCentroidsAndAssignments :: [[Double]] -> (Bool, [[Double]] [[Int]]) -> ([[Double]], [Int])
+
+-- recalculateCentroidsAndAssignments dataSet (hasChanged, newCentroids, assignments) keeps updating centroids and recalculating the assignments
+-- of the centroids until there were no changes in the assignments
+recalculateCentroidsAndAssignments :: [[Int]] -> (Bool, [[Int]], [Int]) -> ([[Int]], [Int])
+recalculateCentroidsAndAssignments dataSet (False, centroids, assignments) = (centroids, assignments)
+recalculateCentroidsAndAssignments dataSet (n, centroids, assignments) = recalculateCentroidsAndAssignments dataSet (wasChanged, newCentroids, newAssignments)
     where newCentroids = recalculateCentroids assignments dataSet 
           (wasChanged, newAssignments) = updateAssignmentsFlagged newCentroids dataSet
 
@@ -75,13 +87,16 @@ helper dataSet (n, centroids, assignments) = helper dataSet (wasChanged, newCent
 --     . groupBy (\a b -> (fst a) == (fst b)) 
 --     . zip assignments dataSet
 
+updateAssignmentsFlagged :: [[Int]] -> [[Int]] -> (Bool, [Int])
+updateAssignmentsFlagged _ _ = (False, [ 0, 0, 1, 1])
+
 recalculateCentroids assignments dataSet = result
     where zips = zip assignments dataSet
           groups = groupBy (\a b -> (fst a) == (fst b)) zips
           groupsNoLabels = map removeGroupingLabels groups
           result = map averageOfPoints groupsNoLabels
 
--- indexOfClosestMean :: (Floating f, Ord f) => [[ f ]] -> [ f ] -> Int
+indexOfClosestMean :: (Floating f, Ord f) => [[ f ]] -> [ f ] -> Int
 indexOfClosestMean centroids rgb = unbox $ elemIndex minDist distances
     where distances = map (distance rgb) centroids
           minDist = minimum distances
@@ -96,7 +111,7 @@ removeGroupingLabels arr = map groupingHelper arr
 
 -- -- average of n points with dimensions d into one point with dimension d
 averageOfPoints :: (Foldable f) => f [ Int ] -> [ Int ]
-averageOfPoints arr = divVec (foldl addVec (take d $ repeat 0) arr) (length arr)
+averageOfPoints arr = divVec (foldl addVec (take dimensions $ repeat 0) arr) (length arr)
 
 addVec :: Num a => [a] -> [a] -> [a]
 addVec a1 a2 = addHelper a1 a2 (length a1) []
