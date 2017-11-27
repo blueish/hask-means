@@ -1,9 +1,27 @@
 import System.Random
 import Data.List.Split
 import Data.List
+import Data.Vector.Storable
+import Codec.Picture
 
 -- main = do
 --     putStrLn "hello world"
+
+--main will read an image from filepath str and return [[RGB values]]
+main = do
+	img <- readImage "./test.png"
+	let rgb8 = convertRGB8 $ helper img
+	let pixels = chunksOf 3 $ toList (imageData rgb8)
+	return pixels
+
+
+helper (Left a) = error "merp"
+helper (Right a) = a
+
+quantizeImage bits = do
+	img <- main
+	--(means, labels) <- kmeans (2^b) img
+	return 0
 
 
 
@@ -49,3 +67,7 @@ indexOfClosestMean rgb centroids = unbox $ elemIndex minDist distances
 
 distance :: Floating f => [ f ] -> [f] -> f
 distance point1 point2 = sqrt . foldl (\acc (a, b) -> acc + ((a - b) ^ 2)) 0 $ zip point1 point2
+
+
+
+
