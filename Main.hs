@@ -54,17 +54,13 @@ kmeans k dataSet = do
         print "the initial centroids: "
         print initialCentroids
         -- assign each object to initial closest mean
-        -- let closestMeans = map (indexOfClosestMean initialCentroids) dataSet
-        -- print "initial closest means: "
-        -- print closestMeans
+        let closestMeans = map (indexOfClosestMean initialCentroids) dataSet
+        print "initial closest means: "
+        print closestMeans
 
-        -- let finalMeans = calculateMeansAndCentroids initialCentroids dataSet
-        -- update the means
-        -- recur until the update of the mean matches the new update
-        -- return
-        -- print "returning..."
-        -- return finalMeans
-        return 0
+        let finalMeans = calculateMeansAndCentroids initialCentroids dataSet
+        print "returning..."
+        return finalMeans
 
 -- calculateMeansAndCentroids centroids dataSet =  takes initial centroids and a dataSet, and recalculates the centroids
 -- until an update of the centroids lead to no changes, returning the final centroids and the group assignment values for the dataSet
@@ -81,12 +77,16 @@ recalculateCentroidsAndAssignments dataSet False centroids assignments = (centro
 recalculateCentroidsAndAssignments dataSet _     centroids assignments = recalculateCentroidsAndAssignments
     dataSet wasChanged newCentroids newAssignments
         where newCentroids = recalculateCentroids assignments dataSet 
-              (wasChanged, newAssignments) = updateAssignmentsFlagged newCentroids dataSet
+              (wasChanged, newAssignments) = updateAssignmentsFlagged newCentroids dataSet assignments
 
 
 -- takes centroids and a dataset, and gives back whether any changed alongside the new mappings
-updateAssignmentsFlagged :: [Centroid] -> RGBImageData -> (Bool, CentroidAssignments)
-updateAssignmentsFlagged _ _ = (False, [ 0, 0, 1, 1])
+updateAssignmentsFlagged :: [Centroid] -> RGBImageData -> CentroidAssignments -> (Bool, CentroidAssignments)
+updateAssignmentsFlagged centroids dataSet oldAssignments = (allEqual oldAssignments newAssignments, newAssignments)
+    where newAssignments = map (indexOfClosestMean centroids) dataSet
+
+
+
 
 -- given the current centroid assignments and the dataset, calculates the new means
 recalculateCentroids :: CentroidAssignments -> RGBImageData -> [Centroid]
@@ -125,6 +125,9 @@ addVec a1 a2 = addHelper a1 a2 (length a1) []
                  aIdx = a1 !! newN
                  a2Idx = a2 !! newN
                  newVal = aIdx + a2Idx
+
+allEqual :: Eq a => [a] -> [a] -> Bool
+allEqual c1 c2 = and $ zipWith (==) c1 c2
 
 -- Divides each value of vec by n
 divVec :: [Int] -> Int -> Centroid
