@@ -68,39 +68,38 @@ kmeans k dataSet = do
 
 -- calculateMeansAndCentroids centroids dataSet =  takes initial centroids and a dataSet, and recalculates the centroids
 -- until an update of the centroids lead to no changes, returning the final centroids and the group assignment values for the dataSet
--- calculateMeansAndCentroids :: [[Double]] -> [[Double]] -> ([[Double]], [Int])
--- calculateMeansAndCentroids centroids dataSet = recalculateCentroidsAndAssignments dataSet initAcc
---     where initData = map (indexOfClosestMean centroids) dataSet
---           initAcc = (True, centroids, initData)
+calculateMeansAndCentroids :: [Centroid] -> RGBImageData -> ([Centroid], CentroidAssignments)
+calculateMeansAndCentroids centroids dataSet = recalculateCentroidsAndAssignments dataSet True centroids initData
+    where initData = map (indexOfClosestMean centroids) dataSet
 
     -- recalculateCentroidsAndAssignments :: [[Double]] -> (Bool, [[Double]] [[Int]]) -> ([[Double]], [Int])
 
--- recalculateCentroidsAndAssignments dataSet (hasChanged, newCentroids, assignments) keeps updating centroids and recalculating the assignments
+-- recalculateCentroidsAndAssignments dataSet hasChanged newCentroids assignments keeps updating centroids and recalculating the assignments
 -- of the centroids until there were no changes in the assignments
-recalculateCentroidsAndAssignments :: RGBImageData -> (Bool, [Centroid], CentroidAssignments) -> ([Centroid], CentroidAssignments)
-recalculateCentroidsAndAssignments dataSet (False, centroids, assignments) = (centroids, assignments)
-recalculateCentroidsAndAssignments dataSet (n, centroids, assignments) = recalculateCentroidsAndAssignments dataSet (wasChanged, newCentroids, newAssignments)
-    where newCentroids = recalculateCentroids assignments dataSet 
-          (wasChanged, newAssignments) = updateAssignmentsFlagged newCentroids dataSet
+recalculateCentroidsAndAssignments :: RGBImageData -> Bool -> [Centroid] -> CentroidAssignments -> ([Centroid], CentroidAssignments)
+recalculateCentroidsAndAssignments dataSet False centroids assignments = (centroids, assignments)
+recalculateCentroidsAndAssignments dataSet _     centroids assignments = recalculateCentroidsAndAssignments
+    dataSet wasChanged newCentroids newAssignments
+        where newCentroids = recalculateCentroids assignments dataSet 
+              (wasChanged, newAssignments) = updateAssignmentsFlagged newCentroids dataSet
 
--- recalculateCentroids assignments dataSet = 
---     map calculateNewMean
---     . map removeGroupingLabels
---     . groupBy (\a b -> (fst a) == (fst b)) 
---     . zip assignments dataSet
 
 -- takes centroids and a dataset, and gives back whether any changed alongside the new mappings
 updateAssignmentsFlagged :: [Centroid] -> RGBImageData -> (Bool, CentroidAssignments)
 updateAssignmentsFlagged _ _ = (False, [ 0, 0, 1, 1])
 
+-- given the current centroid assignments and the dataset, calculates the new means
 recalculateCentroids :: CentroidAssignments -> RGBImageData -> [Centroid]
-recalculateCentroids assignments dataSet = result
-    where zips = zip assignments dataSet
-          groups = groupBy (\a b -> (fst a) == (fst b)) zips
-          groupsNoLabels = map removeGroupingLabels groups
-          result = map calculateNewMean groupsNoLabels
+recalculateCentroids assignments dataSet = 
+    map calculateNewMean
+    . map removeGroupingLabels
+    . groupBy (\a b -> (fst a) == (fst b)) 
+    $ zip assignments dataSet
 
--- indexOfClosestMean :: (Floating f, Ord f) => [Centroid] -> RGBValue -> Int
+
+-- returns the index of the closest centroid (mean)
+-- used for assignment of the dataset to centroids
+indexOfClosestMean :: [Centroid] -> RGBValue -> Int
 indexOfClosestMean centroids rgb = unbox $ elemIndex minDist distances
     where distances = map (distance rgb) centroids
           minDist = minimum distances
@@ -109,19 +108,15 @@ indexOfClosestMean centroids rgb = unbox $ elemIndex minDist distances
 
 
 -- removeGroupingLabels removes the tuples added by the zipping of groups
--- removeGroupingLabels :: [(Int, [Int])] -> [[Int]]
-removeGroupingLabels arr = map groupingHelper arr
-    where groupingHelper (_, a) = a
+removeGroupingLabels :: [(a, b)] -> [b]
+removeGroupingLabels arr = map snd arr
 
--- -- average of n points with dimensions d into one point with dimension d
--- calculateNewMean :: (Foldable f) => f [ Int ] -> [ Int ]
+-- average of n points with dimensions d into one point with dimension d
 calculateNewMean :: [RGBValue] -> Centroid
 calculateNewMean arr = divVec (foldl addVec initialZeroVector arr) (length arr)
     where initialZeroVector = take dimensions $ repeat 0
--- calculateNewMean arr = map (/ (length arr))
-                       -- $ foldl addVec initialZeroVector arr
-    -- where initialZeroVector = take dimensions $ repeat 0
 
+-- TODO: this is gross, there has to be a better way to fold two arrays
 addVec :: [Int] -> [Int] -> [Int]
 addVec a1 a2 = addHelper a1 a2 (length a1) []
     where addHelper a1 a2 0 acc = acc
