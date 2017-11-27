@@ -66,11 +66,20 @@ calculateMeansAndCentroids centroids dataSet = helper dataSet (True, centroids, 
 
 helper dataSet (False, centroids, assignments) = (centroids, assignments)
 helper dataSet (n, centroids, assignments) = helper dataSet (wasChanged, newCentroids, newAssignments)
-    where newCentroids = recalculateCentroids dataSet assignments
-          (wasChanged, newAssignments) = updateAssignmentsFlagged
+    where newCentroids = recalculateCentroids assignments dataSet 
+          (wasChanged, newAssignments) = updateAssignmentsFlagged newCentroids dataSet
 
+-- recalculateCentroids assignments dataSet = 
+--     map averageOfPoints
+--     . map removeGroupingLabels
+--     . groupBy (\a b -> (fst a) == (fst b)) 
+--     . zip assignments dataSet
 
--- updateAssignmentsFlagged = (False, [0, 1, 2])
+recalculateCentroids assignments dataSet = result
+    where zips = zip assignments dataSet
+          groups = groupBy (\a b -> (fst a) == (fst b)) zips
+          groupsNoLabels = map removeGroupingLabels groups
+          result = map averageOfPoints groupsNoLabels
 
 -- indexOfClosestMean :: (Floating f, Ord f) => [[ f ]] -> [ f ] -> Int
 indexOfClosestMean centroids rgb = unbox $ elemIndex minDist distances
@@ -78,6 +87,29 @@ indexOfClosestMean centroids rgb = unbox $ elemIndex minDist distances
           minDist = minimum distances
           unbox (Just x) = x
           unbox (Nothing) = error "Failed to find the index of an element in its own array."
+
+
+-- removeGroupingLabels removes the tuples added by the zipping of groups
+removeGroupingLabels :: [(Int, [Int])] -> [[Int]]
+removeGroupingLabels arr = map groupingHelper arr
+    where groupingHelper (_, a) = a
+
+-- -- average of n points with dimensions d into one point with dimension d
+averageOfPoints :: (Foldable f) => f [ Int ] -> [ Int ]
+averageOfPoints arr = divVec (foldl addVec (take d $ repeat 0) arr) (length arr)
+
+addVec :: Num a => [a] -> [a] -> [a]
+addVec a1 a2 = addHelper a1 a2 (length a1) []
+    where addHelper a1 a2 0 acc = acc
+          addHelper a1 a2 n acc = addHelper a1 a2 newN (newVal:acc)
+           where newN = n - 1
+                 aIdx = a1 !! newN
+                 a2Idx = a2 !! newN
+                 newVal = aIdx + a2Idx
+
+divVec :: Integral f => [f] -> f -> [f]
+divVec vec n = map (\a -> a `div` n) vec
+
 
 -- distance :: Floating f => [ f ] -> [f] -> f
 distance point1 point2 = sqrt . foldl (\acc (a, b) -> acc + ((a - b) ^ 2)) 0 $ zip point1 point2
