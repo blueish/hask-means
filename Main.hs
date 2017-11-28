@@ -113,16 +113,12 @@ emptyArrayMap n = Map.fromList [ (i, []) | i <- [0..(n - 1)] ]
 -- newcalc :: [Mean] -> MeanAssignments -> RGBImageData -> [Mean]
 newcalc oldMeans assignments dataSet =
     foldl insertGroupIntoMap (emptyArrayMap $ length oldMeans - 1) -- :: Map Int [ RGBValue ]
-    . groupBy (\a b -> (fst a) == (fst b)) -- :: [ [ (Int, RGBValue) ] ]
     $ zip assignments dataSet -- ::[ (Int, RGBValue) ]
 
-insertGroupIntoMap :: Map.Map Int [ RGBValue ] -> [ (Int, RGBValue)] -> Map.Map Int [ RGBValue ]
-insertGroupIntoMap = \accMap groupedAssignment ->
-    Map.insertWith
-        (++)
-        (fst $ head groupedAssignment)
-        (removeGroupingLabels groupedAssignment)
-        accMap
+-- inserts the grouped assignment into the map
+-- insertGroupIntoMap :: Map.Map Int [ RGBValue ] -> [ (Int, RGBValue)] -> Map.Map Int [ RGBValue ]
+insertGroupIntoMap = \accMap (idx, rgbvector) ->
+    Map.insertWith (++) idx [rgbvector] accMap
         
 
 
