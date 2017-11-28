@@ -108,18 +108,24 @@ updateAssignmentsFlagged means dataSet oldAssignments = (allEqual oldAssignments
 emptyArrayMap :: Int -> Map.Map Int [a]
 emptyArrayMap n = Map.fromList [ (i, []) | i <- [0..(n - 1)] ]
 
+-- todo: future refactor should make mean assignments not use indicies. Maybe a map?
+-- iterating over the indicies and using that index feels like it's the wrong way
+newcalc :: [Mean] -> MeanAssignments -> RGBImageData -> [Mean]
+newcalc oldMeans assignments dataSet = map mapIndex [0..(length oldMeans - 1)] 
+    where oldAssignmentMap = generateAssignedVectorMap oldMeans assignments dataSet
+          mapIndex = (\idx -> let assignedValues = oldAssignmentMap Map.! idx
+           in if (null assignedValues)
+                then oldMeans !! idx
+                else calculateNewMean $ oldAssignmentMap Map.! idx)
 
-
--- newcalc :: [Mean] -> MeanAssignments -> RGBImageData -> [Mean]
-newcalc oldMeans assignments dataSet =
+-- generateAssignedVectorMap :: [Mean] -> MeanAssignments -> RGBImageData -> [Mean]
+generateAssignedVectorMap oldMeans assignments dataSet =
     foldl insertGroupIntoMap (emptyArrayMap $ length oldMeans - 1) -- :: Map Int [ RGBValue ]
-    $ zip assignments dataSet -- ::[ (Int, RGBValue) ]
-
+        $ zip assignments dataSet -- ::[ (Int, RGBValue) ]
+    where insertGroupIntoMap = \accMap (idx, rgbvector) -> Map.insertWith (++) idx [rgbvector] accMap
+        
 -- inserts the grouped assignment into the map
 -- insertGroupIntoMap :: Map.Map Int [ RGBValue ] -> [ (Int, RGBValue)] -> Map.Map Int [ RGBValue ]
-insertGroupIntoMap = \accMap (idx, rgbvector) ->
-    Map.insertWith (++) idx [rgbvector] accMap
-        
 
 
 
