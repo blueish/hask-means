@@ -4,6 +4,7 @@ import Data.List
 import Data.Vector.Storable (toList)
 import Codec.Picture
 import GHC.Word
+import qualified Data.Map as Map
 
 --main will read an image from filepath str and return [[RGB values]]
 -- main :: [Char] -> IO [[Word8]]
@@ -94,7 +95,7 @@ recalculateMeansAndAssignments :: RGBImageData -> Bool -> [Mean] -> MeanAssignme
 recalculateMeansAndAssignments dataSet False means assignments = (means, assignments)
 recalculateMeansAndAssignments dataSet _     means assignments = recalculateMeansAndAssignments
     dataSet wasChanged newMeans newAssignments
-        where newMeans = recalculateMeans assignments dataSet 
+        where newMeans = calculateMeans means assignments dataSet 
               (wasChanged, newAssignments) = updateAssignmentsFlagged newMeans dataSet assignments
 
 
@@ -104,11 +105,35 @@ updateAssignmentsFlagged means dataSet oldAssignments = (allEqual oldAssignments
     where newAssignments = map (indexOfClosestMean means) dataSet
 
 
+emptyArrayMap :: Int -> Map.Map Int [a]
+emptyArrayMap n = Map.fromList [ (i, []) | i <- [0..(n - 1)] ]
 
 
+
+-- newcalc :: [Mean] -> MeanAssignments -> RGBImageData -> [Mean]
+newcalc oldMeans assignments dataSet =
+    foldl insertGroupIntoMap (emptyArrayMap $ length oldMeans - 1) -- :: Map Int [ RGBValue ]
+    . groupBy (\a b -> (fst a) == (fst b)) -- :: [ [ (Int, RGBValue) ] ]
+    $ zip assignments dataSet -- ::[ (Int, RGBValue) ]
+
+insertGroupIntoMap :: Map.Map Int [ RGBValue ] -> [ (Int, RGBValue)] -> Map.Map Int [ RGBValue ]
+insertGroupIntoMap = \accMap groupedAssignment ->
+    Map.insertWith
+        (++)
+        (fst $ head groupedAssignment)
+        (removeGroupingLabels groupedAssignment)
+        accMap
+        
+
+
+
+-- THIS HAS A BUG: it will not keep old centroids. we need to pass all of the means, and it should only
+-- update the ones that have assignments but keep the old ones.
 -- given the current mean assignments and the dataset, calculates the new means
-recalculateMeans :: MeanAssignments -> RGBImageData -> [Mean]
-recalculateMeans assignments dataSet = 
+-- for each mean, we grab any associated vectors from meanassignments and rgbimage data, and recalculate the vectors
+
+calculateMeans :: [Mean] -> MeanAssignments -> RGBImageData -> [Mean]
+calculateMeans oldMeans assignments dataSet = 
     map calculateNewMean
     . map removeGroupingLabels
     . groupBy (\a b -> (fst a) == (fst b)) 
