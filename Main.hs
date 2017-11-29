@@ -72,6 +72,8 @@ kmeans k dataSet = do
 
         print "The initial means: "
         print initialMeans
+        print "length of dataaset"
+        print (length dataSet)
         -- assign each object to initial closest mean
         let closestMeans = map (indexOfClosestMean initialMeans) dataSet
 
@@ -98,7 +100,7 @@ recalculateMeansAndAssignments dataSet _     means assignments = recalculateMean
 
 -- takes means and a dataset, and gives back whether any changed alongside the new mappings
 updateAssignmentsFlagged :: [Mean] -> RGBImageData -> MeanAssignments -> (Bool, MeanAssignments)
-updateAssignmentsFlagged means dataSet oldAssignments = (allEqual oldAssignments newAssignments, newAssignments)
+updateAssignmentsFlagged means dataSet oldAssignments = (not $ allEqual oldAssignments newAssignments, newAssignments)
     where newAssignments = map (indexOfClosestMean means) dataSet
 
 
