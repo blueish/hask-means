@@ -68,15 +68,15 @@ kmeans k dataSet = do
         let initialMeans = chunksOf dimensions
                 . take (dimensions * k)
                 $ (randomRs (0, 255) rg :: [Double])
-        print "the test data:"
-        print dataSet
+        -- print "the test data:"
+        -- print dataSet
 
         print "the initial means: "
         print initialMeans
         -- assign each object to initial closest mean
         let closestMeans = map (indexOfClosestMean initialMeans) dataSet
-        print "initial closest means: "
-        print closestMeans
+        -- print "initial closest means: "
+        -- print closestMeans
 
         let finalMeans = calculateMeansAndMeans initialMeans dataSet
         print "returning..."
@@ -95,7 +95,7 @@ recalculateMeansAndAssignments :: RGBImageData -> Bool -> [Mean] -> MeanAssignme
 recalculateMeansAndAssignments dataSet False means assignments = (means, assignments)
 recalculateMeansAndAssignments dataSet _     means assignments = recalculateMeansAndAssignments
     dataSet wasChanged newMeans newAssignments
-        where newMeans = calculateMeans means assignments dataSet 
+        where newMeans = newcalc means assignments dataSet
               (wasChanged, newAssignments) = updateAssignmentsFlagged newMeans dataSet assignments
 
 
