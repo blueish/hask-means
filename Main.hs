@@ -5,6 +5,7 @@ import Data.Vector.Storable (toList)
 import Codec.Picture
 import GHC.Word
 import qualified Data.Map as Map
+import Debug.Trace
 
 --main will read an image from filepath str and return [[RGB values]]
 -- main :: [Char] -> IO [[Word8]]
@@ -94,7 +95,7 @@ recalculateMeansAndAssignments :: RGBImageData -> Bool -> [Mean] -> MeanAssignme
 recalculateMeansAndAssignments dataSet False means assignments = (means, assignments)
 recalculateMeansAndAssignments dataSet _     means assignments = recalculateMeansAndAssignments
     dataSet wasChanged newMeans newAssignments
-        where newMeans = recalculateMeans means assignments dataSet
+        where newMeans = recalculateMeans (trace ("new means: " ++ show means) means) assignments dataSet
               (wasChanged, newAssignments) = updateAssignmentsFlagged newMeans dataSet assignments
 
 
