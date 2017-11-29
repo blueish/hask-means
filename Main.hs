@@ -64,22 +64,19 @@ testInput = [
 kmeans k dataSet = do
         -- initialize means (using Random)
         -- our values are RGB values, so we'll take number pairs from 0 to 255
+        -- Future work: change this to use kmeans++ to calculate initial centroids
         rg <- newStdGen
         let initialMeans = chunksOf dimensions
                 . take (dimensions * k)
                 $ (randomRs (0, 255) rg :: [Double])
-        -- print "the test data:"
-        -- print dataSet
 
-        print "the initial means: "
+        print "The initial means: "
         print initialMeans
         -- assign each object to initial closest mean
         let closestMeans = map (indexOfClosestMean initialMeans) dataSet
-        -- print "initial closest means: "
-        -- print closestMeans
 
         let finalMeans = calculateMeansAndAssignments initialMeans dataSet
-        print "returning..."
+        print "Final means: "
         return finalMeans
 
 -- calculateMeansAndAssignments means dataSet =  takes initial means and a dataSet, and recalculates the means
@@ -95,7 +92,7 @@ recalculateMeansAndAssignments :: RGBImageData -> Bool -> [Mean] -> MeanAssignme
 recalculateMeansAndAssignments dataSet False means assignments = (means, assignments)
 recalculateMeansAndAssignments dataSet _     means assignments = recalculateMeansAndAssignments
     dataSet wasChanged newMeans newAssignments
-        where newMeans = newcalc means assignments dataSet
+        where newMeans = recalculateMeans means assignments dataSet
               (wasChanged, newAssignments) = updateAssignmentsFlagged newMeans dataSet assignments
 
 
@@ -110,8 +107,8 @@ emptyArrayMap n = Map.fromList [ (i, []) | i <- [0..(n - 1)] ]
 
 -- todo: future refactor should make mean assignments not use indicies. Maybe a map?
 -- iterating over the indicies and using that index feels like it's the wrong way
-newcalc :: [Mean] -> MeanAssignments -> RGBImageData -> [Mean]
-newcalc oldMeans assignments dataSet = map mapIndex [0..(length oldMeans - 1)] 
+recalculateMeans :: [Mean] -> MeanAssignments -> RGBImageData -> [Mean]
+recalculateMeans oldMeans assignments dataSet = map mapIndex [0..(length oldMeans - 1)] 
     where oldAssignmentMap = generateAssignedVectorMap oldMeans assignments dataSet
           mapIndex = (\idx -> let assignedValues = oldAssignmentMap Map.! idx
            in if (null assignedValues)
