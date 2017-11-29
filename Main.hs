@@ -78,14 +78,14 @@ kmeans k dataSet = do
         -- print "initial closest means: "
         -- print closestMeans
 
-        let finalMeans = calculateMeansAndMeans initialMeans dataSet
+        let finalMeans = calculateMeansAndAssignments initialMeans dataSet
         print "returning..."
         return finalMeans
 
--- calculateMeansAndMeans means dataSet =  takes initial means and a dataSet, and recalculates the means
+-- calculateMeansAndAssignments means dataSet =  takes initial means and a dataSet, and recalculates the means
 -- until an update of the means lead to no changes, returning the final means and the group assignment values for the dataSet
-calculateMeansAndMeans :: [Mean] -> RGBImageData -> ([Mean], MeanAssignments)
-calculateMeansAndMeans means dataSet = recalculateMeansAndAssignments dataSet True means initData
+calculateMeansAndAssignments :: [Mean] -> RGBImageData -> ([Mean], MeanAssignments)
+calculateMeansAndAssignments means dataSet = recalculateMeansAndAssignments dataSet True means initData
     where initData = map (indexOfClosestMean means) dataSet
 
 
@@ -124,23 +124,6 @@ generateAssignedVectorMap oldMeans assignments dataSet =
         $ zip assignments dataSet -- ::[ (Int, RGBValue) ]
     where insertGroupIntoMap = \accMap (idx, rgbvector) -> Map.insertWith (++) idx [rgbvector] accMap
         
--- inserts the grouped assignment into the map
--- insertGroupIntoMap :: Map.Map Int [ RGBValue ] -> [ (Int, RGBValue)] -> Map.Map Int [ RGBValue ]
-
-
-
--- THIS HAS A BUG: it will not keep old centroids. we need to pass all of the means, and it should only
--- update the ones that have assignments but keep the old ones.
--- given the current mean assignments and the dataset, calculates the new means
--- for each mean, we grab any associated vectors from meanassignments and rgbimage data, and recalculate the vectors
-
-calculateMeans :: [Mean] -> MeanAssignments -> RGBImageData -> [Mean]
-calculateMeans oldMeans assignments dataSet = 
-    map calculateNewMean
-    . map removeGroupingLabels
-    . groupBy (\a b -> (fst a) == (fst b)) 
-    $ zip assignments dataSet
-
 
 -- returns the index of the closest mean
 -- used for assignment of the dataset to means
@@ -150,10 +133,6 @@ indexOfClosestMean means rgb = unbox $ elemIndex minDist distances
           minDist = minimum distances
           unbox (Just x) = x
           unbox (Nothing) = error "Failed to find the index of an element in its own array."
-
--- removeGroupingLabels removes the tuples added by the zipping of groups
-removeGroupingLabels :: [(a, b)] -> [b]
-removeGroupingLabels arr = map snd arr
 
 -- average of n points with dimensions d into one point with dimension d
 calculateNewMean :: [RGBValue] -> Mean
