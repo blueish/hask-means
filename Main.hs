@@ -38,10 +38,10 @@ ignoreError :: Either t b -> b
 ignoreError (Left a) = error "merp"
 ignoreError (Right a) = a
 
--- quantizeImage path bits = do
---     img <- imgFromPath path
---     (means, labels) <- kmeans (2^bits) img
---     return (means, labels)
+quantizeImage path bits = do
+    img <- imgFromPath path
+    x <- kmeans (2^bits) img
+    return (Map.keys x)
     -- return 0
 {-
  2 -> [ [0,0], [2.1,2] [2,2]] -> 
@@ -82,10 +82,10 @@ kmeans k dataSet = do
         -- let closestMeans = map (indexOfClosestMean initialMeans) dataSet
         let newAssigns = calculateMeanMap initialMeans dataSet
 
-        -- let finalMeans = calculateMeansAndAssignments initialMeans dataSet
+        let finalMeans = calculateAssignments newAssigns dataSet
         print "Final means: "
-        -- return finalMeans
-        return 0
+        return finalMeans
+        -- return 0
 
 
 calculateMeanMap :: [Mean] -> [RGBValue] -> NewMeanAssignments
@@ -100,7 +100,7 @@ calculateAssignments meanmap dataset = recalculateAssignments meanmap dataset Tr
 recalculateAssignments :: NewMeanAssignments -> RGBImageData -> Bool -> NewMeanAssignments
 recalculateAssignments meanmap _ False = meanmap
 recalculateAssignments meanmap dataset _ = recalculateAssignments newmap dataset waschanged
-        where newmeans = createNewMeans (trace ("old means: " ++ show meanmap) meanmap)
+        where newmeans = createNewMeans (trace ("found new means.." ++ "") meanmap)
               (waschanged, newmap) = updateAssignments newmeans dataset
 
 createNewMeans :: NewMeanAssignments -> [Mean]
