@@ -5,14 +5,17 @@ import Data.Vector.Storable (toList)
 import Codec.Picture
 import GHC.Word
 import qualified Data.Map as Map
+import Debug.Trace
 
 --main will read an image from filepath str and return [[RGB values]]
 -- main :: [Char] -> IO [[Word8]]
 imgFromPath path = do
     img <- readImage path
     let rgb8 = convertRGB8 $ ignoreError img
+    let width = imageWidth rgb8
+    let height = imageHeight rgb8
     let pixels = chunksOf 3 $ map fromIntegral $ map toInteger $ toList (imageData rgb8)
-    return pixels
+    return (width, height, pixels)
 
 -- ASSUMPTION: D = 3 for all images (rgb values are 3 integer values)
 dimensions :: Int
@@ -37,10 +40,20 @@ ignoreError :: Either t b -> b
 ignoreError (Left a) = error "merp"
 ignoreError (Right a) = a
 
+
+-- imageCreator :: String -> IO ()
+imageCreator path imageChunked width height = writePng path $ generateImage pixelRenderer width height
+   where pixelRenderer x y = PixelRGB8 ((imageChunked !! x !! y) !! 0) ((imageChunked !! x !! y) !! 1) ((imageChunked !! x !! y) !! 2)
+        
+
+
 quantizeImage path bits = do
-    img <- imgFromPath path
+    (width, height, img) <- imgFromPath path
     (means, yVector) <- kmeans (2^bits) img
-    let finalImage = map (\num -> means !! num) yVector
+    let intMeans = map (map (\x -> fromIntegral $ round x)) means
+    let finalImage = map (\num -> intMeans !! num) yVector
+    let imageChunked = chunksOf width finalImage
+    imageCreator "result.png" imageChunked width height
     return finalImage
     -- return 0
 {-
@@ -74,20 +87,16 @@ kmeans k dataSet = do
                 . take (dimensions * k)
                 $ (randomRs (0, 255) rg :: [Double])
 
-        {-
         print "The initial means: "
         print initialMeans
         print "length of dataaset"
         print (length dataSet)
-        -}
 
         let newAssigns = calculateMeanMap initialMeans dataSet
         let finalMeans = calculateAssignments newAssigns dataSet
         let yVector = map (indexOfClosestMean $ Map.keys finalMeans) dataSet
-        {-
         print "y vector is"
         print yVector
-        -}
 
         -- print "Final means: "
         return (Map.keys finalMeans, yVector)
