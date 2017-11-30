@@ -128,7 +128,7 @@ createNewMeans meanmap = Map.foldrWithKey
 updateAssignments :: [Mean] -> RGBImageData -> (Bool, NewMeanAssignments)
 updateAssignments means dataset = (waschanged, (trace ("new means:" ++ ( show $ Map.keys newMeanMap)) newMeanMap))
     where newMeanMap = calculateMeanMap means dataset
-          waschanged = anyDifferent means $ Map.keys newMeanMap
+          waschanged = not $ and $ map (`elem` means) ( Map.keys newMeanMap)
 
 
 
@@ -156,13 +156,9 @@ addVec a1 a2 = addHelper a1 a2 (length a1) []
                  a2Idx = a2 !! newN
                  newVal = aIdx + a2Idx
 
--- anyDifferent :: Eq a => [a] -> [a] -> Bool
-anyDifferent c1 c2 = or $ zipWith (/=) c1 c2
-
 -- Divides each value of vec by n
 divVec :: [Int] -> Int -> Mean
 divVec vec n = map (\a -> a / (fromIntegral n)) $ map fromIntegral vec
-
 
 distance :: RGBValue -> Mean -> Double
 distance rgb cent = sqrt 
