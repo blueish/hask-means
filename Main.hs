@@ -78,14 +78,11 @@ kmeans k dataSet = do
         print initialMeans
         print "length of dataaset"
         print (length dataSet)
-        -- assign each object to initial closest mean
-        -- let closestMeans = map (indexOfClosestMean initialMeans) dataSet
-        let newAssigns = calculateMeanMap initialMeans dataSet
 
+        let newAssigns = calculateMeanMap initialMeans dataSet
         let finalMeans = calculateAssignments newAssigns dataSet
         print "Final means: "
         return finalMeans
-        -- return 0
 
 
 calculateMeanMap :: [Mean] -> [RGBValue] -> NewMeanAssignments
@@ -117,49 +114,6 @@ updateAssignments means dataset = (waschanged, newMeanMap)
           waschanged = not $ allEqual means $ Map.keys newMeanMap
 
 
-{-
--- calculateMeansAndAssignments means dataSet =  takes initial means and a dataSet, and recalculates the means
--- until an update of the means lead to no changes, returning the final means and the group assignment values for the dataSet
-calculateMeansAndAssignments :: [Mean] -> RGBImageData -> ([Mean], MeanAssignments)
-calculateMeansAndAssignments means dataSet = recalculateMeansAndAssignments dataSet True means initData
-    where initData = map (indexOfClosestMean means) dataSet
-
-
--- recalculateMeansAndAssignments dataSet hasChanged newMeans assignments keeps updating means and recalculating the assignments
--- of the means until there were no changes in the assignments
-recalculateMeansAndAssignments :: RGBImageData -> Bool -> [Mean] -> MeanAssignments -> ([Mean], MeanAssignments)
-recalculateMeansAndAssignments dataSet False means assignments = (means, assignments)
-recalculateMeansAndAssignments dataSet _     means assignments = recalculateMeansAndAssignments
-    dataSet wasChanged newMeans newAssignments
-        where newMeans = recalculateMeans (trace ("new means: " ++ show means) means) assignments dataSet
-              (wasChanged, newAssignments) = updateAssignmentsFlagged newMeans dataSet assignments
--}
-
--- takes means and a dataset, and gives back whether any changed alongside the new mappings
-updateAssignmentsFlagged :: [Mean] -> RGBImageData -> MeanAssignments -> (Bool, MeanAssignments)
-updateAssignmentsFlagged means dataSet oldAssignments = (not $ allEqual oldAssignments newAssignments, newAssignments)
-    where newAssignments = map (indexOfClosestMean means) dataSet
-
-
-emptyArrayMap :: Int -> Map.Map Int [a]
-emptyArrayMap n = Map.fromList [ (i, []) | i <- [0..(n - 1)] ]
-
--- todo: future refactor should make mean assignments not use indicies. Maybe a map?
--- iterating over the indicies and using that index feels like it's the wrong way
-recalculateMeans :: [Mean] -> MeanAssignments -> RGBImageData -> [Mean]
-recalculateMeans oldMeans assignments dataSet = map mapIndex [0..(length oldMeans - 1)] 
-    where oldAssignmentMap = generateAssignedVectorMap oldMeans assignments dataSet
-          mapIndex = (\idx -> let assignedValues = oldAssignmentMap Map.! idx
-           in if (null assignedValues)
-                then oldMeans !! idx
-                else calculateNewMean $ oldAssignmentMap Map.! idx)
-
--- generateAssignedVectorMap :: [Mean] -> MeanAssignments -> RGBImageData -> [Mean]
-generateAssignedVectorMap oldMeans assignments dataSet =
-    foldl insertGroupIntoMap (emptyArrayMap $ length oldMeans - 1) -- :: Map Int [ RGBValue ]
-        $ zip assignments dataSet -- ::[ (Int, RGBValue) ]
-    where insertGroupIntoMap = \accMap (idx, rgbvector) -> Map.insertWith (++) idx [rgbvector] accMap
-        
 
 -- returns the index of the closest mean
 -- used for assignment of the dataset to means
