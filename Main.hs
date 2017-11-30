@@ -43,7 +43,7 @@ ignoreError (Right a) = a
 
 -- imageCreator :: String -> IO ()
 imageCreator path imageChunked width height = writePng path $ generateImage pixelRenderer width height
-   where pixelRenderer x y = PixelRGB8 ((imageChunked !! y !! x) !! 0) ((imageChunked !! x !! y) !! 1) ((imageChunked !! x !! y) !! 2)
+   where pixelRenderer x y = PixelRGB8 ((imageChunked !! y !! x) !! 0) ((imageChunked !! y !! x) !! 1) ((imageChunked !! y !! x) !! 2)
         
 
 
@@ -126,9 +126,9 @@ createNewMeans meanmap = Map.foldrWithKey
     meanmap
 
 updateAssignments :: [Mean] -> RGBImageData -> (Bool, NewMeanAssignments)
-updateAssignments means dataset = (waschanged, newMeanMap)
+updateAssignments means dataset = (waschanged, (trace ("new means:" ++ ( show $ Map.keys newMeanMap)) newMeanMap))
     where newMeanMap = calculateMeanMap means dataset
-          waschanged = not $ allEqual means $ Map.keys newMeanMap
+          waschanged = not $ allEqual (map (map round) means) $ (map (map round) $ Map.keys newMeanMap)
 
 
 
@@ -156,7 +156,7 @@ addVec a1 a2 = addHelper a1 a2 (length a1) []
                  a2Idx = a2 !! newN
                  newVal = aIdx + a2Idx
 
-allEqual :: Eq a => [a] -> [a] -> Bool
+-- allEqual :: Eq a => [a] -> [a] -> Bool
 allEqual c1 c2 = and $ zipWith (==) c1 c2
 
 -- Divides each value of vec by n
