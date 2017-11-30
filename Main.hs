@@ -4,6 +4,8 @@ import Data.List
 import Data.Vector.Storable (toList)
 import Codec.Picture
 import GHC.Word
+import qualified Data.Map as Map
+import Debug.Trace
 
 --main will read an image from filepath str and return [[RGB values]]
 -- main :: [Char] -> IO [[Word8]]
@@ -28,6 +30,9 @@ type Mean = [Double]
 -- a list with a 1:1 map representing a mapping of each RGBValue to each Mean
 type MeanAssignments = [Int]
 
+-- new assignments
+type NewMeanAssignments = Map.Map Mean [RGBValue]
+
 
 ignoreError :: Either t b -> b
 ignoreError (Left a) = error "merp"
@@ -35,8 +40,8 @@ ignoreError (Right a) = a
 
 quantizeImage path bits = do
     img <- imgFromPath path
-    (means, labels) <- kmeans (2^bits) img
-    return (means, labels)
+    x <- kmeans (2^bits) img
+    return (Map.keys x)
     -- return 0
 {-
  2 -> [ [0,0], [2.1,2] [2,2]] -> 
@@ -63,56 +68,51 @@ testInput = [
 kmeans k dataSet = do
         -- initialize means (using Random)
         -- our values are RGB values, so we'll take number pairs from 0 to 255
+        -- Future work: change this to use kmeans++ to calculate initial centroids
         rg <- newStdGen
         let initialMeans = chunksOf dimensions
                 . take (dimensions * k)
                 $ (randomRs (0, 255) rg :: [Double])
-        print "the test data:"
-        print dataSet
 
-        print "the initial means: "
+        print "The initial means: "
         print initialMeans
-        -- assign each object to initial closest mean
-        let closestMeans = map (indexOfClosestMean initialMeans) dataSet
-        print "initial closest means: "
-        print closestMeans
+        print "length of dataaset"
+        print (length dataSet)
 
-        let finalMeans = calculateMeansAndMeans initialMeans dataSet
-        print "returning..."
+        let newAssigns = calculateMeanMap initialMeans dataSet
+        let finalMeans = calculateAssignments newAssigns dataSet
+        print "Final means: "
         return finalMeans
 
--- calculateMeansAndMeans means dataSet =  takes initial means and a dataSet, and recalculates the means
--- until an update of the means lead to no changes, returning the final means and the group assignment values for the dataSet
-calculateMeansAndMeans :: [Mean] -> RGBImageData -> ([Mean], MeanAssignments)
-calculateMeansAndMeans means dataSet = recalculateMeansAndAssignments dataSet True means initData
-    where initData = map (indexOfClosestMean means) dataSet
+
+calculateMeanMap :: [Mean] -> [RGBValue] -> NewMeanAssignments
+calculateMeanMap means dataSet = Map.union
+    (Map.fromList . zip means $ groupBy (\a b -> indexOfClosestMean means a == indexOfClosestMean means b) dataSet)
+    $ Map.fromList [ (m, []) | m <- means ]
+
+calculateAssignments :: NewMeanAssignments -> RGBImageData -> NewMeanAssignments
+calculateAssignments meanmap dataset = recalculateAssignments meanmap dataset True 
 
 
--- recalculateMeansAndAssignments dataSet hasChanged newMeans assignments keeps updating means and recalculating the assignments
--- of the means until there were no changes in the assignments
-recalculateMeansAndAssignments :: RGBImageData -> Bool -> [Mean] -> MeanAssignments -> ([Mean], MeanAssignments)
-recalculateMeansAndAssignments dataSet False means assignments = (means, assignments)
-recalculateMeansAndAssignments dataSet _     means assignments = recalculateMeansAndAssignments
-    dataSet wasChanged newMeans newAssignments
-        where newMeans = recalculateMeans assignments dataSet 
-              (wasChanged, newAssignments) = updateAssignmentsFlagged newMeans dataSet assignments
+recalculateAssignments :: NewMeanAssignments -> RGBImageData -> Bool -> NewMeanAssignments
+recalculateAssignments meanmap _ False = meanmap
+recalculateAssignments meanmap dataset _ = recalculateAssignments newmap dataset waschanged
+        where newmeans = createNewMeans (trace ("found new means.." ++ "") meanmap)
+              (waschanged, newmap) = updateAssignments newmeans dataset
 
+createNewMeans :: NewMeanAssignments -> [Mean]
+createNewMeans meanmap = Map.foldrWithKey
+    (\key val acc -> if null val
+                        then key:acc -- if the list is empty, don't modify this mean
+                        else (calculateNewMean val):acc) -- else generate the new mean from the centroid of values
+    []
+    meanmap
 
--- takes means and a dataset, and gives back whether any changed alongside the new mappings
-updateAssignmentsFlagged :: [Mean] -> RGBImageData -> MeanAssignments -> (Bool, MeanAssignments)
-updateAssignmentsFlagged means dataSet oldAssignments = (allEqual oldAssignments newAssignments, newAssignments)
-    where newAssignments = map (indexOfClosestMean means) dataSet
+updateAssignments :: [Mean] -> RGBImageData -> (Bool, NewMeanAssignments)
+updateAssignments means dataset = (waschanged, newMeanMap)
+    where newMeanMap = calculateMeanMap means dataset
+          waschanged = not $ allEqual means $ Map.keys newMeanMap
 
-
-
-
--- given the current mean assignments and the dataset, calculates the new means
-recalculateMeans :: MeanAssignments -> RGBImageData -> [Mean]
-recalculateMeans assignments dataSet = 
-    map calculateNewMean
-    . map removeGroupingLabels
-    . groupBy (\a b -> (fst a) == (fst b)) 
-    $ zip assignments dataSet
 
 
 -- returns the index of the closest mean
@@ -123,10 +123,6 @@ indexOfClosestMean means rgb = unbox $ elemIndex minDist distances
           minDist = minimum distances
           unbox (Just x) = x
           unbox (Nothing) = error "Failed to find the index of an element in its own array."
-
--- removeGroupingLabels removes the tuples added by the zipping of groups
-removeGroupingLabels :: [(a, b)] -> [b]
-removeGroupingLabels arr = map snd arr
 
 -- average of n points with dimensions d into one point with dimension d
 calculateNewMean :: [RGBValue] -> Mean
