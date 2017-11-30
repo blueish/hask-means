@@ -43,7 +43,7 @@ ignoreError (Right a) = a
 
 -- imageCreator :: String -> IO ()
 imageCreator path imageChunked width height = writePng path $ generateImage pixelRenderer width height
-   where pixelRenderer x y = PixelRGB8 ((imageChunked !! x !! y) !! 0) ((imageChunked !! x !! y) !! 1) ((imageChunked !! x !! y) !! 2)
+   where pixelRenderer x y = PixelRGB8 ((imageChunked !! y !! x) !! 0) ((imageChunked !! x !! y) !! 1) ((imageChunked !! x !! y) !! 2)
         
 
 
@@ -54,7 +54,7 @@ quantizeImage path bits = do
     let finalImage = map (\num -> intMeans !! num) yVector
     let imageChunked = chunksOf width finalImage
     imageCreator "result.png" imageChunked width height
-    return finalImage
+    return "finished"
     -- return 0
 {-
  2 -> [ [0,0], [2.1,2] [2,2]] -> 
@@ -95,8 +95,8 @@ kmeans k dataSet = do
         let newAssigns = calculateMeanMap initialMeans dataSet
         let finalMeans = calculateAssignments newAssigns dataSet
         let yVector = map (indexOfClosestMean $ Map.keys finalMeans) dataSet
-        print "y vector is"
-        print yVector
+        -- print "y vector is"
+        -- print yVector
 
         -- print "Final means: "
         return (Map.keys finalMeans, yVector)
