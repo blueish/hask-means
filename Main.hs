@@ -5,7 +5,6 @@ import Data.Vector.Storable (toList)
 import Codec.Picture
 import GHC.Word
 import qualified Data.Map as Map
-import Debug.Trace
 
 --main will read an image from filepath str and return [[RGB values]]
 -- main :: [Char] -> IO [[Word8]]
@@ -40,8 +39,9 @@ ignoreError (Right a) = a
 
 quantizeImage path bits = do
     img <- imgFromPath path
-    x <- kmeans (2^bits) img
-    return (Map.keys x)
+    (means, yVector) <- kmeans (2^bits) img
+    let finalImage = map (\num -> means !! num) yVector
+    return finalImage
     -- return 0
 {-
  2 -> [ [0,0], [2.1,2] [2,2]] -> 
@@ -74,15 +74,23 @@ kmeans k dataSet = do
                 . take (dimensions * k)
                 $ (randomRs (0, 255) rg :: [Double])
 
+        {-
         print "The initial means: "
         print initialMeans
         print "length of dataaset"
         print (length dataSet)
+        -}
 
         let newAssigns = calculateMeanMap initialMeans dataSet
         let finalMeans = calculateAssignments newAssigns dataSet
-        print "Final means: "
-        return finalMeans
+        let yVector = map (indexOfClosestMean $ Map.keys finalMeans) dataSet
+        {-
+        print "y vector is"
+        print yVector
+        -}
+
+        -- print "Final means: "
+        return (Map.keys finalMeans, yVector)
 
 
 calculateMeanMap :: [Mean] -> [RGBValue] -> NewMeanAssignments
@@ -97,7 +105,7 @@ calculateAssignments meanmap dataset = recalculateAssignments meanmap dataset Tr
 recalculateAssignments :: NewMeanAssignments -> RGBImageData -> Bool -> NewMeanAssignments
 recalculateAssignments meanmap _ False = meanmap
 recalculateAssignments meanmap dataset _ = recalculateAssignments newmap dataset waschanged
-        where newmeans = createNewMeans (trace ("found new means.." ++ "") meanmap)
+        where newmeans = createNewMeans meanmap
               (waschanged, newmap) = updateAssignments newmeans dataset
 
 createNewMeans :: NewMeanAssignments -> [Mean]
