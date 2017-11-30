@@ -113,7 +113,10 @@ calculateAssignments meanmap dataset = recalculateAssignments meanmap dataset Tr
 
 recalculateAssignments :: NewMeanAssignments -> RGBImageData -> Bool -> NewMeanAssignments
 recalculateAssignments meanmap _ False = meanmap
-recalculateAssignments meanmap dataset _ = recalculateAssignments newmap dataset waschanged
+-- there's an edge case where the means may switch places, if that happens OR waschanged was false,
+-- we just return the last valid configuration (since it is a valid convergence no matter what)
+recalculateAssignments meanmap dataset _ = if waschanged then recalculateAssignments newmap dataset waschanged
+                                                         else recalculateAssignments meanmap dataset False
         where newmeans = createNewMeans meanmap
               (waschanged, newmap) = updateAssignments newmeans dataset
 
@@ -126,7 +129,7 @@ createNewMeans meanmap = Map.foldrWithKey
     meanmap
 
 updateAssignments :: [Mean] -> RGBImageData -> (Bool, NewMeanAssignments)
-updateAssignments means dataset = (waschanged, (trace ("new means:" ++ ( show $ Map.keys newMeanMap)) newMeanMap))
+updateAssignments means dataset = (waschanged, newMeanMap)
     where newMeanMap = calculateMeanMap means dataset
           waschanged = not $ and $ map (`elem` means) ( Map.keys newMeanMap)
 
