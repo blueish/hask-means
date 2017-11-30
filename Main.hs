@@ -30,6 +30,9 @@ type Mean = [Double]
 -- a list with a 1:1 map representing a mapping of each RGBValue to each Mean
 type MeanAssignments = [Int]
 
+-- new assignments
+type NewMeanAssignments = Map.Map Mean [RGBValue]
+
 
 ignoreError :: Either t b -> b
 ignoreError (Left a) = error "merp"
@@ -77,10 +80,23 @@ kmeans k dataSet = do
         print (length dataSet)
         -- assign each object to initial closest mean
         let closestMeans = map (indexOfClosestMean initialMeans) dataSet
+        let newAssigns = generateInitialAssignments initialMeans dataSet
 
         let finalMeans = calculateMeansAndAssignments initialMeans dataSet
         print "Final means: "
         return finalMeans
+
+
+generateInitialAssignments :: [Mean] -> [RGBValue] -> NewMeanAssignments
+generateInitialAssignments means dataSet = Map.union
+    (Map.fromList . zip means $ groupBy (\a b -> indexOfClosestMean means a == indexOfClosestMean means b) dataSet)
+    $ Map.fromList [ (m, []) | m <- means ]
+
+
+
+
+
+
 
 -- calculateMeansAndAssignments means dataSet =  takes initial means and a dataSet, and recalculates the means
 -- until an update of the means lead to no changes, returning the final means and the group assignment values for the dataSet
