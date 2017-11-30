@@ -38,10 +38,10 @@ ignoreError :: Either t b -> b
 ignoreError (Left a) = error "merp"
 ignoreError (Right a) = a
 
-quantizeImage path bits = do
-    img <- imgFromPath path
-    (means, labels) <- kmeans (2^bits) img
-    return (means, labels)
+-- quantizeImage path bits = do
+--     img <- imgFromPath path
+--     (means, labels) <- kmeans (2^bits) img
+--     return (means, labels)
     -- return 0
 {-
  2 -> [ [0,0], [2.1,2] [2,2]] -> 
@@ -79,25 +79,45 @@ kmeans k dataSet = do
         print "length of dataaset"
         print (length dataSet)
         -- assign each object to initial closest mean
-        let closestMeans = map (indexOfClosestMean initialMeans) dataSet
-        let newAssigns = generateInitialAssignments initialMeans dataSet
+        -- let closestMeans = map (indexOfClosestMean initialMeans) dataSet
+        let newAssigns = calculateMeanMap initialMeans dataSet
 
-        let finalMeans = calculateMeansAndAssignments initialMeans dataSet
+        -- let finalMeans = calculateMeansAndAssignments initialMeans dataSet
         print "Final means: "
-        return finalMeans
+        -- return finalMeans
+        return 0
 
 
-generateInitialAssignments :: [Mean] -> [RGBValue] -> NewMeanAssignments
-generateInitialAssignments means dataSet = Map.union
+calculateMeanMap :: [Mean] -> [RGBValue] -> NewMeanAssignments
+calculateMeanMap means dataSet = Map.union
     (Map.fromList . zip means $ groupBy (\a b -> indexOfClosestMean means a == indexOfClosestMean means b) dataSet)
     $ Map.fromList [ (m, []) | m <- means ]
 
+calculateAssignments :: NewMeanAssignments -> RGBImageData -> NewMeanAssignments
+calculateAssignments meanmap dataset = recalculateAssignments meanmap dataset True 
 
 
+recalculateAssignments :: NewMeanAssignments -> RGBImageData -> Bool -> NewMeanAssignments
+recalculateAssignments meanmap _ False = meanmap
+recalculateAssignments meanmap dataset _ = recalculateAssignments newmap dataset waschanged
+        where newmeans = createNewMeans (trace ("old means: " ++ show meanmap) meanmap)
+              (waschanged, newmap) = updateAssignments newmeans dataset
+
+createNewMeans :: NewMeanAssignments -> [Mean]
+createNewMeans meanmap = Map.foldrWithKey
+    (\key val acc -> if null val
+                        then key:acc -- if the list is empty, don't modify this mean
+                        else (calculateNewMean val):acc) -- else generate the new mean from the centroid of values
+    []
+    meanmap
+
+updateAssignments :: [Mean] -> RGBImageData -> (Bool, NewMeanAssignments)
+updateAssignments means dataset = (waschanged, newMeanMap)
+    where newMeanMap = calculateMeanMap means dataset
+          waschanged = not $ allEqual means $ Map.keys newMeanMap
 
 
-
-
+{-
 -- calculateMeansAndAssignments means dataSet =  takes initial means and a dataSet, and recalculates the means
 -- until an update of the means lead to no changes, returning the final means and the group assignment values for the dataSet
 calculateMeansAndAssignments :: [Mean] -> RGBImageData -> ([Mean], MeanAssignments)
@@ -113,7 +133,7 @@ recalculateMeansAndAssignments dataSet _     means assignments = recalculateMean
     dataSet wasChanged newMeans newAssignments
         where newMeans = recalculateMeans (trace ("new means: " ++ show means) means) assignments dataSet
               (wasChanged, newAssignments) = updateAssignmentsFlagged newMeans dataSet assignments
-
+-}
 
 -- takes means and a dataset, and gives back whether any changed alongside the new mappings
 updateAssignmentsFlagged :: [Mean] -> RGBImageData -> MeanAssignments -> (Bool, MeanAssignments)
