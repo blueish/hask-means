@@ -113,10 +113,7 @@ calculateAssignments meanmap dataset = recalculateAssignments meanmap dataset Tr
 
 recalculateAssignments :: NewMeanAssignments -> RGBImageData -> Bool -> NewMeanAssignments
 recalculateAssignments meanmap _ False = meanmap
--- there's an edge case where the means may switch places, if that happens OR waschanged was false,
--- we just return the last valid configuration (since it is a valid convergence no matter what)
-recalculateAssignments meanmap dataset _ = if waschanged then recalculateAssignments newmap dataset waschanged
-                                                         else recalculateAssignments meanmap dataset False
+recalculateAssignments meanmap dataset _ = recalculateAssignments newmap dataset waschanged
         where newmeans = createNewMeans meanmap
               (waschanged, newmap) = updateAssignments newmeans dataset
 
